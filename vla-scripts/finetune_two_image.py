@@ -24,7 +24,7 @@ from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-
+import torch.nn as nn
 import draccus
 import torch
 import torch.distributed as dist
@@ -42,7 +42,7 @@ import wandb
 from prismatic.models.backbones.llm.prompting import PurePromptBuilder, VicunaV15ChatPromptBuilder
 from prismatic.util.data_utils import PaddedCollatorForActionPrediction
 from prismatic.vla.action_tokenizer import ActionTokenizer
-from prismatic.vla.datasets import RLDSBatchTransform, RLDSDataset
+from prismatic.vla.datasets import RLDSBatchTransform, RLDSDataset, RLDSBatchTransformDoubleImage
 from prismatic.vla.datasets.rlds.utils.data_utils import save_dataset_statistics
 
 from prismatic.extern.hf.configuration_prismatic import OpenVLAConfig
@@ -75,20 +75,20 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 @dataclass
 class FinetuneConfig:
     # fmt: off
-    vla_path: str = "openvla/openvla-7b"                            # Path to OpenVLA model (on HuggingFace Hub)
+    vla_path: str = "hf/openvla-multi-image"                            # Path to OpenVLA model (on HuggingFace Hub)
 
     # Directory Paths
-    data_root_dir: Path = Path("datasets/open-x-embodiment")        # Path to Open-X dataset directory
-    dataset_name: str = "droid_wipe"                                # Name of fine-tuning dataset (e.g., `droid_wipe`)
-    run_root_dir: Path = Path("runs")                               # Path to directory to store logs & checkpoints
+    data_root_dir: Path = Path("libero-datasets")        # Path to Open-X dataset directory
+    dataset_name: str = "libero_spatial_no_noops"                                # Name of fine-tuning dataset (e.g., `droid_wipe`)
+    run_root_dir: Path = Path("logs/lora_openvla-7b_libero_spatial_multi_image")                               # Path to directory to store logs & checkpoints
     adapter_tmp_dir: Path = Path("adapter-tmp")                     # Temporary directory for LoRA weights before fusing
 
     # Fine-tuning Parameters
-    batch_size: int = 16                                            # Fine-tuning batch size
-    max_steps: int = 200_000                                        # Max number of fine-tuning steps
+    batch_size: int = 4                                            # Fine-tuning batch size
+    max_steps: int = 50_000                                        # Max number of fine-tuning steps
     save_steps: int = 5000                                          # Interval for checkpoint saving
-    learning_rate: float = 5e-4                                     # Fine-tuning learning rate
-    grad_accumulation_steps: int = 1                                # Gradient accumulation steps
+    learning_rate: float = 2e-4                                     # Fine-tuning learning rate
+    grad_accumulation_steps: int = 16                                # Gradient accumulation steps
     image_aug: bool = True                                          # Whether to train with image augmentations
     shuffle_buffer_size: int = 100_000                              # Dataloader shuffle buffer size (can reduce if OOM)
     save_latest_checkpoint_only: bool = False                        # Whether to save only one checkpoint per run and
@@ -103,7 +103,7 @@ class FinetuneConfig:
                                                                     #   => CAUTION: Reduces memory but hurts performance
 
     # Tracking Parameters
-    wandb_project: str = "openvla"                                  # Name of W&B project to log to (use default!)
+    wandb_project: str = "openvla-multi-image"                                  # Name of W&B project to log to (use default!)
     wandb_entity: str = None                                         # Name of entity to log under
     run_id_note: Optional[str] = None                               # Extra note for logging, Weights & Biases
 
@@ -162,7 +162,7 @@ def finetune(cfg: FinetuneConfig) -> None:
         low_cpu_mem_usage=True,
         trust_remote_code=True,
     )
-
+    
     # Device Placement =>> note that BitsAndBytes automatically handles for quantized training
     if cfg.use_quantization:
         vla = prepare_model_for_kbit_training(vla)
@@ -206,7 +206,7 @@ def finetune(cfg: FinetuneConfig) -> None:
     #     prompt_builder_fn=PurePromptBuilder if "v01" not in cfg.vla_path else VicunaV15ChatPromptBuilder,
     # )
     # ---
-    batch_transform = RLDSBatchTransform(
+    batch_transform = RLDSBatchTransformDoubleImage(
         action_tokenizer,
         processor.tokenizer,
         image_transform=processor.image_processor.apply_transform,

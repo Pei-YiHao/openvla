@@ -46,6 +46,7 @@ def decode_and_resize(
     obs: Dict,
     resize_size: Union[Tuple[int, int], Dict[str, Tuple[int, int]]],
     depth_resize_size: Union[Tuple[int, int], Dict[str, Tuple[int, int]]],
+    wirst_pic_in_pic: bool = False,
 ) -> Dict:
     """Decodes images and depth images, and then optionally resizes them."""
     image_names = {key[6:] for key in obs if key.startswith("image_")}
@@ -95,5 +96,41 @@ def decode_and_resize(
             depth = dl.transforms.resize_depth_image(depth, size=depth_resize_size[name])
 
         obs[f"depth_{name}"] = depth
+    if wirst_pic_in_pic:
+        obs = wrist_image_in_image(obs)
+    return obs
+
+def wrist_image_in_image(obs):
+    """Embeds the wrist image in the main image, resizing it to 1/4 of its original size."""
+    image_names = {key[6:] for key in obs if key.startswith("image_")}
+    if "wrist" not in image_names:
+        return obs
+
+    # Extract images from the observation
+    image = obs["image_primary"]
+    wrist = obs["image_wrist"]
+
+    # Get the shape of the original images
+    image_shape = tf.shape(image)
+    wrist_shape = tf.shape(wrist)
+
+    # Resize wrist image to 1/4 of its original size
+    new_wrist_height = wrist_shape[0] // 4
+    new_wrist_width = wrist_shape[1] // 4
+    wrist_resized = tf.image.resize(wrist, [new_wrist_height, new_wrist_width])
+
+    # Calculate the position to place the resized wrist image
+    image_height = image_shape[0]
+    image_width = image_shape[1]
+
+    # Convert tensors to numpy arrays for manipulation
+    combined_image = image.numpy().astype(np.uint8)  # Ensure the correct type
+    wrist_resized_np = wrist_resized.numpy().astype(np.uint8)  # Ensure the correct type
+
+    # Insert the resized wrist image into the top right corner
+    combined_image[0:new_wrist_height, image_width-new_wrist_width:image_width] = wrist_resized_np
+
+    # Convert back to a tensor and save it back to the observation
+    obs["image_primary"] = tf.convert_to_tensor(combined_image)
 
     return obs

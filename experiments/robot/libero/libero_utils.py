@@ -47,7 +47,7 @@ def resize_image(img, resize_size):
     return img
 
 
-def get_libero_image(obs, resize_size):
+def get_libero_image(obs, resize_size, picinpic=True):
     """Extracts image from observations and preprocesses it."""
     assert isinstance(resize_size, int) or isinstance(resize_size, tuple)
     if isinstance(resize_size, int):
@@ -55,8 +55,22 @@ def get_libero_image(obs, resize_size):
     img = obs["agentview_image"]
     img = img[::-1, ::-1]  # IMPORTANT: rotate 180 degrees to match train preprocessing
     img = resize_image(img, resize_size)
+    if picinpic:
+        img_wrist = obs['robot0_eye_in_hand_image']
+        img_wrist = resize_image(img_wrist, (resize_size[0] // 4, resize_size[1] // 4))
+        img = insert_image_at_top_right(img, img_wrist)
+    
     return img
 
+def insert_image_at_top_right(img, img_wrist):
+    # 获取img和img_wrist的尺寸
+    img_height, img_width, _= img.shape
+    wrist_height, wrist_width, _ = img_wrist.shape
+    
+    # 将img_wrist插入到img的右上角
+    img[0:wrist_height, img_width-wrist_width:img_width] = img_wrist
+    
+    return img
 
 def save_rollout_video(rollout_images, idx, success, task_description, log_file=None):
     """Saves an MP4 replay of an episode."""

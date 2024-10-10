@@ -126,11 +126,11 @@ class OpenVLAServer:
 @dataclass
 class DeployConfig:
     # fmt: off
-    openvla_path: Union[str, Path] = "openvla/openvla-7b"               # HF Hub Path (or path to local run directory)
+    openvla_path: Union[str, Path] = "logs/lora_openvla-7b_libero_spatial_imageinimage/libero-spatial+libero_spatial_no_noops+b64+lr-0.0002+lora-r32+dropout-0.0+q-4bit--image_aug-1000steps"               # HF Hub Path (or path to local run directory)
 
     # Server Configuration
     host: str = "0.0.0.0"                                               # Host IP Address
-    port: int = 8000                                                    # Host Port
+    port: int = 7999                                                    # Host Port
 
     # fmt: on
 

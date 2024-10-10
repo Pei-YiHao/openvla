@@ -1,0 +1,14 @@
+torchrun --standalone --nnodes 1 --nproc-per-node 1 vla-scripts/finetune.py \
+  --vla_path "hf/libero-object" \
+  --data_root_dir datasets/libero-datasets \
+  --dataset_name libero_object_no_noops \
+  --run_root_dir logs/lora_openvla-7b_libero_object_imageinimage \
+  --adapter_tmp_dir logs/ft_openvla-7b_libero_object_imageinimage/lora_tmp \
+  --lora_rank 32 \
+  --batch_size 8 \
+  --grad_accumulation_steps 16 \
+  --learning_rate 2e-4 \
+  --image_aug True \
+  --wandb_project openvla-7b-lora-picinpic \
+  --save_steps 10000 \
+  --max_steps 20000

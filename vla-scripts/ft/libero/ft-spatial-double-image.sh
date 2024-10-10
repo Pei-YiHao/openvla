@@ -1,0 +1,1 @@
+torchrun --standalone --nnodes 1 --nproc-per-node 2 vla-scripts/finetune_two_image.py

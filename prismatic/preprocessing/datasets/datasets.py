@@ -174,7 +174,7 @@ class FinetuneDataset(Dataset[Dict[str, torch.Tensor]]):
         # === Handle "unimodal" (language-only) vs. "multimodal" ===
         if "image" in self.examples[idx]:
             image_path = Path(self.examples[idx]["image"])
-
+            print(f"Processing Image: {image_path}")
             # Set the <BOS> token's label to IGNORE_INDEX (since we're inserting the image patches right after)
             labels[0] = IGNORE_INDEX
 

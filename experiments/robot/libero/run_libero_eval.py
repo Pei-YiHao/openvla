@@ -84,6 +84,8 @@ class GenerateConfig:
 
     seed: int = 7                                    # Random Seed (for reproducibility)
 
+    # multi view control
+    picinpic: bool = True
     # fmt: on
 
 
@@ -115,7 +117,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
     processor = None
     if cfg.model_family == "openvla":
         processor = get_processor(cfg)
-
+    # pic in pic?
+    picinpic = cfg.picinpic
     # Initialize local logging
     run_id = f"EVAL-{cfg.task_suite_name}-{cfg.model_family}-{DATE_TIME}"
     if cfg.run_id_note is not None:
@@ -193,7 +196,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         continue
 
                     # Get preprocessed image
-                    img = get_libero_image(obs, resize_size)
+                    img = get_libero_image(obs, resize_size, picinpic)
 
                     # Save preprocessed image for replay video
                     replay_images.append(img)
